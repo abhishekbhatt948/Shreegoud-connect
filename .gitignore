@@ -1,0 +1,19 @@
+# Ignore environment files
+.env
+
+# Ignore dependency folders
+node_modules/
+vendor/
+infrastructure
+
+# Ignore build artifacts
+dist/
+build/
+
+# Ignore Terraform cache and providers
+.terraform/
+
+# Ignore local OS files
+.DS_Store
+Thumbs.db
+

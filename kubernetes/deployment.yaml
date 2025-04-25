@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shreegaud-connect-api
+  labels:
+    app: shreegaud-connect-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: shreegaud-connect-api
+  template:
+    metadata:
+      labels:
+        app: shreegaud-connect-api
+    spec:
+      containers:
+      - name: api
+        image: ${DOCKER_REGISTRY}/shreegaud-connect-api:${CI_COMMIT_SHA}
+        ports:
+        - containerPort: 8000
+        env:
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: region
+        - name: COGNITO_USER_POOL_ID
+          valueFrom:
+            secretKeyRef:
+              name: cognito-credentials
+              key: user-pool-id
+        - name: COGNITO_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: cognito-credentials
+              key: client-id
+        - name: S3_BUCKET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: s3-credentials
+              key: bucket-name
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: url
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shreegaud-connect-api
+spec:
+  selector:
+    app: shreegaud-connect-api
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: LoadBalancer 

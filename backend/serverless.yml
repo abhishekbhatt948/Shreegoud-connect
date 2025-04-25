@@ -1,0 +1,155 @@
+service: shreegaud-backend
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: ${opt:stage, 'dev'}
+  region: ap-south-1
+  environment:
+    STAGE: ${self:provider.stage}
+    USER_POOL_ID: ${ssm:/shreegaud/${self:provider.stage}/cognito/user-pool-id}
+    USER_POOL_CLIENT_ID: ${ssm:/shreegaud/${self:provider.stage}/cognito/client-id}
+    MEDIA_BUCKET: ${ssm:/shreegaud/${self:provider.stage}/s3/media-bucket}
+
+plugins:
+  - serverless-plugin-typescript
+
+package:
+  individually: true
+  patterns:
+    - '!node_modules/.prisma/**'
+    - '!node_modules/@prisma/client/libquery_engine-*'
+    - '!node_modules/prisma/libquery_engine-*'
+    - '!node_modules/@prisma/client/runtime/**'
+    - '!node_modules/prisma/runtime/**'
+    - '!tests/**'
+
+functions:
+  # User Management
+  createUser:
+    handler: src/functions/users/create.handler
+    events:
+      - http:
+          path: /users
+          method: post
+          authorizer: aws_iam
+          cors: true
+
+  getUser:
+    handler: src/functions/users/get.handler
+    events:
+      - http:
+          path: /users/{id}
+          method: get
+          authorizer: aws_iam
+          cors: true
+
+  updateUser:
+    handler: src/functions/users/update.handler
+    events:
+      - http:
+          path: /users/{id}
+          method: put
+          authorizer: aws_iam
+          cors: true
+
+  # Event Management
+  createEvent:
+    handler: src/functions/events/create.handler
+    events:
+      - http:
+          path: /events
+          method: post
+          authorizer: aws_iam
+          cors: true
+
+  getEvent:
+    handler: src/functions/events/get.handler
+    events:
+      - http:
+          path: /events/{id}
+          method: get
+          authorizer: aws_iam
+          cors: true
+
+  listEvents:
+    handler: src/functions/events/list.handler
+    events:
+      - http:
+          path: /events
+          method: get
+          authorizer: aws_iam
+          cors: true
+
+  # Media Management
+  uploadMedia:
+    handler: src/functions/media/upload.handler
+    events:
+      - http:
+          path: /media/upload
+          method: post
+          authorizer: aws_iam
+          cors: true
+
+  getMedia:
+    handler: src/functions/media/get.handler
+    events:
+      - http:
+          path: /media/{id}
+          method: get
+          authorizer: aws_iam
+          cors: true
+
+  # Document Management
+  uploadDocument:
+    handler: src/functions/documents/upload.handler
+    events:
+      - http:
+          path: /documents/upload
+          method: post
+          authorizer: aws_iam
+          cors: true
+
+  getDocument:
+    handler: src/functions/documents/get.handler
+    events:
+      - http:
+          path: /documents/{id}
+          method: get
+          authorizer: aws_iam
+          cors: true
+
+resources:
+  Resources:
+    # API Gateway
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${self:service}-${self:provider.stage}
+
+    # Cognito
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${self:provider.stage}-user-pool
+        AutoVerifiedAttributes:
+          - email
+          - phone_number
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: true
+            RequireUppercase: true
+
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-${self:provider.stage}-client
+        UserPoolId: !Ref UserPool
+        GenerateSecret: false
+        ExplicitAuthFlows:
+          - ALLOW_USER_PASSWORD_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_USER_SRP_AUTH 

@@ -1,0 +1,38 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+stages:
+  - build
+  - test
+  - deploy
+
+build:
+  stage: build
+  script:
+    - docker build -t ${DOCKER_REGISTRY}/shreegaud-connect-api:${CI_COMMIT_SHA} -f backend/Dockerfile .
+    - docker push ${DOCKER_REGISTRY}/shreegaud-connect-api:${CI_COMMIT_SHA}
+
+test:
+  stage: test
+  image: python:3.9
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - python -m pytest tests/
+
+deploy:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl apply -f kubernetes/deployment.yaml
+  environment:
+    name: production
+    url: https://api.shreegaud-connect.com
+  only:
+    - main 
